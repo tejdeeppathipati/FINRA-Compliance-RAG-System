@@ -1,0 +1,76 @@
+version: 1
+scope: finra-only
+sources:
+  - id: finra-2090
+    rule_number: "2090"
+    title: Know Your Customer
+    source_type: rule
+    url: https://www.finra.org/rules-guidance/rulebooks/finra-rules/2090
+
+  - id: finra-2111
+    rule_number: "2111"
+    title: Suitability
+    source_type: rule
+    url: https://www.finra.org/rules-guidance/rulebooks/finra-rules/2111
+
+  - id: finra-2210
+    rule_number: "2210"
+    title: Communications with the Public
+    source_type: rule
+    url: https://www.finra.org/rules-guidance/rulebooks/finra-rules/2210
+
+  - id: finra-3110
+    rule_number: "3110"
+    title: Supervision
+    source_type: rule
+    url: https://www.finra.org/rules-guidance/rulebooks/finra-rules/3110
+
+  - id: finra-3310
+    rule_number: "3310"
+    title: Anti-Money Laundering Compliance Program
+    source_type: rule
+    url: https://www.finra.org/rules-guidance/rulebooks/finra-rules/3310
+
+  - id: finra-4370
+    rule_number: "4370"
+    title: Business Continuity Plans and Emergency Contact Information
+    source_type: rule
+    url: https://www.finra.org/rules-guidance/rulebooks/finra-rules/4370
+
+  - id: finra-4511
+    rule_number: "4511"
+    title: General Requirements
+    source_type: rule
+    url: https://www.finra.org/rules-guidance/rulebooks/finra-rules/4511
+
+  - id: finra-4512
+    rule_number: "4512"
+    title: Customer Account Information
+    source_type: rule
+    url: https://www.finra.org/rules-guidance/rulebooks/finra-rules/4512
+
+  - id: suitability-faq
+    title: FINRA Rule 2111 Suitability FAQ
+    source_type: guidance
+    url: https://www.finra.org/rules-guidance/key-topics/suitability/faq
+
+  - id: supervision-guidance
+    title: Supervision Guidance
+    source_type: guidance
+    url: https://www.finra.org/rules-guidance/key-topics/supervision
+
+  - id: books-records-guidance
+    title: Books and Records Guidance
+    source_type: guidance
+    url: https://www.finra.org/rules-guidance/key-topics/books-records
+
+  - id: business-continuity-guidance
+    title: Business Continuity Planning Guidance
+    source_type: guidance
+    url: https://www.finra.org/rules-guidance/key-topics/business-continuity-planning
+
+  - id: first-overview
+    title: FINRA Rulebook Search Tool (FIRST) Overview
+    source_type: guidance
+    url: https://www.finra.org/rules-guidance/rulebooks/finra-rulebook-search-tool-first
+
