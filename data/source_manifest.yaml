@@ -1,75 +1,81 @@
 version: 1
+corpus_name: finra-compliance-rag
 scope: finra-only
+allowed_hosts:
+  - www.finra.org
 sources:
-  - id: finra-2090
+  - source_id: finra-rule-2090
     rule_number: "2090"
     title: Know Your Customer
     source_type: rule
     url: https://www.finra.org/rules-guidance/rulebooks/finra-rules/2090
 
-  - id: finra-2111
+  - source_id: finra-rule-2111
     rule_number: "2111"
     title: Suitability
     source_type: rule
     url: https://www.finra.org/rules-guidance/rulebooks/finra-rules/2111
 
-  - id: finra-2210
+  - source_id: finra-rule-2210
     rule_number: "2210"
     title: Communications with the Public
     source_type: rule
     url: https://www.finra.org/rules-guidance/rulebooks/finra-rules/2210
 
-  - id: finra-3110
+  - source_id: finra-rule-3110
     rule_number: "3110"
     title: Supervision
     source_type: rule
     url: https://www.finra.org/rules-guidance/rulebooks/finra-rules/3110
 
-  - id: finra-3310
+  - source_id: finra-rule-3310
     rule_number: "3310"
     title: Anti-Money Laundering Compliance Program
     source_type: rule
     url: https://www.finra.org/rules-guidance/rulebooks/finra-rules/3310
 
-  - id: finra-4370
+  - source_id: finra-rule-4370
     rule_number: "4370"
     title: Business Continuity Plans and Emergency Contact Information
     source_type: rule
     url: https://www.finra.org/rules-guidance/rulebooks/finra-rules/4370
 
-  - id: finra-4511
+  - source_id: finra-rule-4511
     rule_number: "4511"
     title: General Requirements
     source_type: rule
     url: https://www.finra.org/rules-guidance/rulebooks/finra-rules/4511
 
-  - id: finra-4512
+  - source_id: finra-rule-4512
     rule_number: "4512"
     title: Customer Account Information
     source_type: rule
     url: https://www.finra.org/rules-guidance/rulebooks/finra-rules/4512
 
-  - id: suitability-faq
+  - source_id: finra-guidance-2111-faq
+    rule_number: "2111"
     title: FINRA Rule 2111 Suitability FAQ
     source_type: guidance
     url: https://www.finra.org/rules-guidance/key-topics/suitability/faq
 
-  - id: supervision-guidance
+  - source_id: finra-guidance-supervision
+    rule_number: "3110"
     title: Supervision Guidance
     source_type: guidance
     url: https://www.finra.org/rules-guidance/key-topics/supervision
 
-  - id: books-records-guidance
+  - source_id: finra-guidance-books-records
     title: Books and Records Guidance
     source_type: guidance
     url: https://www.finra.org/rules-guidance/key-topics/books-records
 
-  - id: business-continuity-guidance
+  - source_id: finra-guidance-bcp
+    rule_number: "4370"
     title: Business Continuity Planning Guidance
     source_type: guidance
     url: https://www.finra.org/rules-guidance/key-topics/business-continuity-planning
 
-  - id: first-overview
+  - source_id: finra-guidance-first-overview
     title: FINRA Rulebook Search Tool (FIRST) Overview
     source_type: guidance
     url: https://www.finra.org/rules-guidance/rulebooks/finra-rulebook-search-tool-first

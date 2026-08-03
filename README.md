@@ -97,6 +97,32 @@ docker compose up -d postgres
 Copy `.env.example` to `.env` only when database or OpenAI-backed work begins. Never
 commit API keys.
 
+## Source snapshots
+
+The manifest permits only HTTPS pages on the explicitly allow-listed FINRA host. The
+fetcher requires a truthful contact address in its user agent, follows and validates
+redirects, retries transient failures, fetches sequentially, and writes HTML plus
+provenance metadata under ignored `data/raw/` directories.
+
+Install the backend package, set a contact address, and fetch one source first:
+
+```bash
+source backend/.venv/bin/activate
+pip install -e 'backend[dev]'
+export FINRA_FETCH_CONTACT="your-email@example.com"
+python scripts/fetch_finra_sources.py --source-id finra-rule-2090
+```
+
+Fetch all 13 sources only after the single-source check succeeds:
+
+```bash
+python scripts/fetch_finra_sources.py
+```
+
+Raw-response SHA-256 hashes establish snapshot provenance. A later normalization stage
+will compute a second content hash after removing volatile page markup; raw hashes alone
+must not be interpreted as evidence that FINRA's legal content changed.
+
 ## API contract
 
 Planned endpoints:
@@ -153,4 +179,3 @@ See [the project plan](docs/PROJECT_PLAN.md) and the
 Phase 1 begins with schema migrations, a validated manifest loader, a polite snapshot
 fetcher, representative HTML fixtures, and section-tree parsing. Its exit criterion is
 reproducible, idempotent ingestion of all 13 sources—not merely successful HTTP downloads.
-
