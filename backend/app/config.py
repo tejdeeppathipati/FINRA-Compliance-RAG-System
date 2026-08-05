@@ -15,6 +15,7 @@ class Settings(BaseSettings):
     app_env: Literal["development", "test", "production"] = "development"
     log_level: str = "INFO"
     database_url: str = "postgresql+psycopg://finra:finra@localhost:5432/finra_rag"
+    database_direct_url: str | None = None
     openai_api_key: str | None = None
     embedding_model: str = "text-embedding-3-small"
     generation_model: str = "gpt-4.1-mini"
@@ -24,8 +25,11 @@ class Settings(BaseSettings):
     rrf_k: int = Field(default=60, ge=1)
     request_timeout_seconds: float = Field(default=30, gt=0)
 
+    @property
+    def migration_database_url(self) -> str:
+        return self.database_direct_url or self.database_url
+
 
 @lru_cache
 def get_settings() -> Settings:
     return Settings()
-

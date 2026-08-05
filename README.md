@@ -94,6 +94,19 @@ To start pgvector for upcoming ingestion work:
 docker compose up -d postgres
 ```
 
+Apply the versioned database schema from the `backend` directory:
+
+```bash
+cd backend
+alembic upgrade head
+alembic current
+alembic check
+```
+
+Alembic migrations are the schema authority. The application uses `DATABASE_URL` at
+runtime and `DATABASE_DIRECT_URL` for migrations. They are identical locally; hosted
+deployments should use a pooled runtime URL and a direct migration URL.
+
 Copy `.env.example` to `.env` only when database or OpenAI-backed work begins. Never
 commit API keys.
 
@@ -122,6 +135,21 @@ python scripts/fetch_finra_sources.py
 Raw-response SHA-256 hashes establish snapshot provenance. A later normalization stage
 will compute a second content hash after removing volatile page markup; raw hashes alone
 must not be interpreted as evidence that FINRA's legal content changed.
+
+Normalize a saved rule snapshot into the ignored `data/normalized/` directory:
+
+```bash
+python scripts/normalize_finra_sources.py --source-id finra-rule-2090
+```
+
+The rule parser selects only FINRA's rule-body block, preserves main versus supplementary
+material, records amendment history and explicit effective-date evidence, and computes a
+stable normalized-content hash. Each section records exact source-element locators and
+source-text hashes, while an embedded audit reports substantive coverage and intentional
+exclusions. Synthetic display labels are explicitly distinguished from official FINRA
+headings. Guidance pages and complex nested rule sections are not yet supported; the
+command fails explicitly for unsupported document types instead of silently producing
+low-quality output.
 
 ## API contract
 
