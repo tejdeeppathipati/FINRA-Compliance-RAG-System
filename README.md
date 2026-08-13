@@ -28,9 +28,9 @@ Implemented now:
   retrieval services;
 - deterministic evidence-only answer formatting with rule/subsection citations and
   fail-closed abstention;
-- optional OpenAI embeddings when `OPENAI_API_KEY` is configured;
+- configurable OpenAI or Gemini embeddings, with Gemini set up for this project;
 - `/api/health`, `/api/sources`, `/api/sources/{source_id}`, and `/api/query`;
-- 31 automated tests plus Ruff linting, and a production-buildable React evidence viewer.
+- 39 automated tests plus Ruff linting, and a production-buildable React evidence viewer.
 
 The answer layer is intentionally conservative until a generation model is configured:
 it returns retrieved evidence rather than inventing a prose answer. This makes the
@@ -120,8 +120,15 @@ Alembic migrations are the schema authority. The application uses `DATABASE_URL`
 runtime and `DATABASE_DIRECT_URL` for migrations. They are identical locally; hosted
 deployments should use a pooled runtime URL and a direct migration URL.
 
-Copy `.env.example` to `.env` only when database or OpenAI-backed work begins. Never
-commit API keys.
+Copy `.env.example` to `.env`, then set your provider key locally. For Gemini:
+
+```bash
+cp .env.example .env
+# edit .env and set GEMINI_API_KEY=...; keep EMBEDDING_PROVIDER=gemini
+```
+
+Never commit API keys. The application uses Gemini's `gemini-embedding-001` with a
+1536-dimensional output, matching the current pgvector schema.
 
 ## Source snapshots
 
@@ -179,8 +186,13 @@ and chunks (without embeddings):
 python scripts/ingest_finra_sources.py --source-id finra-rule-2090
 ```
 
-Add `--embed` only after setting `OPENAI_API_KEY`; this calls the configured OpenAI
-embedding model and stores vectors alongside the chunks.
+Add `--embed` after setting the configured provider key; with Gemini this calls
+`gemini-embedding-001` and stores vectors alongside the chunks. It also backfills
+embeddings for an already-ingested document whose chunks do not yet have vectors:
+
+```bash
+python scripts/ingest_finra_sources.py --source-id finra-rule-2090 --embed
+```
 
 ## API contract
 
@@ -241,7 +253,7 @@ The next implementation increments are deliberately separate from the ingestion 
 2. Start PostgreSQL, run `alembic upgrade head`, and ingest all eight rule snapshots.
 3. Extend the deterministic retrieval runner to vector-enabled configurations and add
    subsection/citation/groundedness scoring.
-4. Add protected admin/evaluation endpoints and a hosted database/OpenAI secret setup.
+4. Add protected admin/evaluation endpoints and hosted database/provider-secret setup.
 
 These are visible follow-on tasks; none should be represented as completed until their
 commands and tests have actually run.
@@ -254,4 +266,4 @@ PYTHONPATH=backend python evaluations/run_retrieval_eval.py
 
 This writes an ignored CSV under `evaluations/reports/`. The runner currently compares
 keyword retrieval with the keyword-only hybrid fallback; vector rows become meaningful
-after `--embed` ingestion and an OpenAI key are configured.
+after `--embed` ingestion and a Gemini key are configured.

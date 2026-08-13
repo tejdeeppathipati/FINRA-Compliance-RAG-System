@@ -41,6 +41,17 @@ def ingest_rule_snapshot(
         )
     )
     if existing is not None:
+        if embedding_provider is not None:
+            existing_chunks = session.scalars(
+                select(Chunk)
+                .where(Chunk.document_id == existing.id)
+                .order_by(Chunk.chunk_index)
+            ).all()
+            for existing_chunk in existing_chunks:
+                if existing_chunk.embedding is None:
+                    existing_chunk.embedding = embedding_provider(existing_chunk.content)
+                    existing_chunk.embedding_model = embedding_model
+            session.flush()
         return existing, False
 
     document = Document(

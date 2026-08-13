@@ -49,7 +49,7 @@ def test_vector_query_requires_embedding_provider() -> None:
     )
     assert response.status_code == 503
     assert response.json()["detail"] == (
-        "Vector retrieval requires a configured OPENAI_API_KEY."
+        "Vector retrieval requires a configured embedding provider key."
     )
 
 

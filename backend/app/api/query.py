@@ -5,12 +5,11 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
-from app.config import get_settings
 from app.db.models import QueryLog
 from app.db.session import get_db_session
 from app.generation.abstention import should_abstain_for_scope
 from app.generation.answer import build_grounded_response
-from app.ingestion.embed import EmbeddingProviderError, embed_text
+from app.ingestion.embed import EmbeddingProviderError, embed_text, has_embedding_credentials
 from app.retrieval.search import hybrid_search, keyword_search, vector_search
 from app.schemas.query import QueryRequest, QueryResponse
 
@@ -28,15 +27,15 @@ def query(
         if should_abstain_for_scope(request.question):
             passages = []
         else:
-            if request.retrieval_mode in {"vector", "hybrid"} and get_settings().openai_api_key:
-                query_embedding = embed_text(request.question)
+            if request.retrieval_mode in {"vector", "hybrid"} and has_embedding_credentials():
+                query_embedding = embed_text(request.question, purpose="query")
             if request.retrieval_mode == "keyword":
                 passages = keyword_search(session, request.question, limit=request.top_k)
             elif request.retrieval_mode == "vector":
                 if query_embedding is None:
                     raise HTTPException(
                         status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                        detail="Vector retrieval requires a configured OPENAI_API_KEY.",
+                        detail="Vector retrieval requires a configured embedding provider key.",
                     )
                 passages = vector_search(session, query_embedding, limit=request.top_k)
             else:

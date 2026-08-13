@@ -17,7 +17,10 @@ class Settings(BaseSettings):
     database_url: str = "postgresql+psycopg://finra:finra@localhost:5432/finra_rag"
     database_direct_url: str | None = None
     openai_api_key: str | None = None
+    gemini_api_key: str | None = None
+    embedding_provider: Literal["openai", "gemini"] = "openai"
     embedding_model: str = "text-embedding-3-small"
+    gemini_embedding_model: str = "gemini-embedding-001"
     generation_model: str = "gpt-4.1-mini"
     prompt_version: str = "finra-grounded-v1"
     default_retrieval_mode: Literal["vector", "keyword", "hybrid"] = "hybrid"
