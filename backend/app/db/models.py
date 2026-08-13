@@ -56,6 +56,8 @@ class Document(Base):
         UniqueConstraint(
             "source_id",
             "normalized_content_hash",
+            "chunk_target_tokens",
+            "chunk_overlap_tokens",
             name="uq_documents_source_normalized_hash",
         ),
         Index("ix_documents_source_retrieved", "source_id", "retrieved_at"),
@@ -73,6 +75,8 @@ class Document(Base):
     normalized_content_hash: Mapped[str] = mapped_column(Text, nullable=False)
     parser_version: Mapped[str] = mapped_column(Text, nullable=False)
     normalized_content: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+    chunk_target_tokens: Mapped[int] = mapped_column(Integer, nullable=False, default=600)
+    chunk_overlap_tokens: Mapped[int] = mapped_column(Integer, nullable=False, default=50)
 
     chunks: Mapped[list[Chunk]] = relationship(
         back_populates="document",

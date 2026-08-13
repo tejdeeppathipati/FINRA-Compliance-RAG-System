@@ -9,19 +9,32 @@ source snapshot metadata, and abstain when its indexed corpus cannot support an 
 
 ## Status
 
-**Phase 0 baseline.** The repository currently provides the project contracts and a
-small runnable FastAPI shell; ingestion, database queries, generation, and the React
-interface are intentionally not represented as complete.
+**MVP backend vertical slice.** The repository now has a working, testable foundation
+for the FINRA-only assistant. The eight rule snapshots in the local starter data have
+been parsed into section-aware normalized JSON with exact substantive-coverage audits.
+Raw HTML and normalized snapshots remain local and ignored by Git.
 
 Implemented now:
 
-- canonical manifest for 8 FINRA rules and 5 FINRA guidance pages;
-- ignored local raw and normalized data directories;
-- 40 labeled evaluation cases with the required category distribution;
-- PostgreSQL/pgvector schema contract and local Docker service;
-- typed query response contract, prompt v1, and deterministic RRF;
-- health endpoint, explicit `501` query placeholder, unit tests, and CI;
-- delivery plan, quality gates, risks, and architecture decisions.
+- manifest-driven FINRA source allow-list for 8 rules and 5 guidance pages;
+- polite snapshot fetching with retrieval timestamps, effective-date evidence, and
+  SHA-256 provenance hashes;
+- rule-body parsing that preserves top-level sections, numbered subsections,
+  supplementary material, source locators, and parser/audit metadata;
+- section-aware 600-token chunks with 50-token overlap only inside oversized sections;
+- PostgreSQL/pgvector models and Alembic migrations for documents, chunks, query logs,
+  and evaluation records;
+- PostgreSQL full-text keyword retrieval, cosine vector retrieval, and RRF hybrid
+  retrieval services;
+- deterministic evidence-only answer formatting with rule/subsection citations and
+  fail-closed abstention;
+- optional OpenAI embeddings when `OPENAI_API_KEY` is configured;
+- `/api/health`, `/api/sources`, `/api/sources/{source_id}`, and `/api/query`;
+- 31 automated tests plus Ruff linting, and a production-buildable React evidence viewer.
+
+The answer layer is intentionally conservative until a generation model is configured:
+it returns retrieved evidence rather than inventing a prose answer. This makes the
+retrieval and citation behavior inspectable first.
 
 ## Scope
 
@@ -142,14 +155,32 @@ Normalize a saved rule snapshot into the ignored `data/normalized/` directory:
 python scripts/normalize_finra_sources.py --source-id finra-rule-2090
 ```
 
+Normalize all eight rule snapshots:
+
+```bash
+for id in finra-rule-2090 finra-rule-2111 finra-rule-2210 finra-rule-3110 \
+  finra-rule-3310 finra-rule-4370 finra-rule-4511 finra-rule-4512; do
+  python scripts/normalize_finra_sources.py --source-id "$id"
+done
+```
+
 The rule parser selects only FINRA's rule-body block, preserves main versus supplementary
 material, records amendment history and explicit effective-date evidence, and computes a
 stable normalized-content hash. Each section records exact source-element locators and
 source-text hashes, while an embedded audit reports substantive coverage and intentional
 exclusions. Synthetic display labels are explicitly distinguished from official FINRA
-headings. Guidance pages and complex nested rule sections are not yet supported; the
-command fails explicitly for unsupported document types instead of silently producing
-low-quality output.
+headings. Guidance pages still require a separate parser and are rejected explicitly by
+the rule-only normalization command.
+
+After PostgreSQL is running and migrations are applied, ingest normalized rule snapshots
+and chunks (without embeddings):
+
+```bash
+python scripts/ingest_finra_sources.py --source-id finra-rule-2090
+```
+
+Add `--embed` only after setting `OPENAI_API_KEY`; this calls the configured OpenAI
+embedding model and stores vectors alongside the chunks.
 
 ## API contract
 
@@ -158,9 +189,9 @@ Planned endpoints:
 | Method | Path | Baseline status |
 |---|---|---|
 | `GET` | `/api/health` | implemented |
-| `POST` | `/api/query` | typed placeholder; returns `501` |
-| `GET` | `/api/sources` | planned |
-| `GET` | `/api/sources/{source_id}` | planned |
+| `POST` | `/api/query` | keyword/hybrid retrieval, citations, evidence, abstention; vector mode requires embeddings |
+| `GET` | `/api/sources` | implemented; manifest plus local snapshot state |
+| `GET` | `/api/sources/{source_id}` | implemented |
 | `POST` | `/api/admin/sync` | planned; must be protected |
 | `POST` | `/api/evaluations/run` | planned; must be protected |
 | `GET` | `/api/evaluations/latest` | planned |
@@ -202,8 +233,25 @@ added only from saved, reproducible evaluation reports.
 See [the project plan](docs/PROJECT_PLAN.md) and the
 [retrieval ADR](docs/adr/0001-section-aware-hybrid-retrieval.md).
 
-## Immediate next milestone
+## Remaining work after the MVP
 
-Phase 1 begins with schema migrations, a validated manifest loader, a polite snapshot
-fetcher, representative HTML fixtures, and section-tree parsing. Its exit criterion is
-reproducible, idempotent ingestion of all 13 sources—not merely successful HTTP downloads.
+The next implementation increments are deliberately separate from the ingestion core:
+
+1. Add a guidance-page parser and ingest the five explanatory pages.
+2. Start PostgreSQL, run `alembic upgrade head`, and ingest all eight rule snapshots.
+3. Extend the deterministic retrieval runner to vector-enabled configurations and add
+   subsection/citation/groundedness scoring.
+4. Add protected admin/evaluation endpoints and a hosted database/OpenAI secret setup.
+
+These are visible follow-on tasks; none should be represented as completed until their
+commands and tests have actually run.
+
+The current local retrieval baseline can be reproduced after database ingestion:
+
+```bash
+PYTHONPATH=backend python evaluations/run_retrieval_eval.py
+```
+
+This writes an ignored CSV under `evaluations/reports/`. The runner currently compares
+keyword retrieval with the keyword-only hybrid fallback; vector rows become meaningful
+after `--embed` ingestion and an OpenAI key are configured.

@@ -9,6 +9,7 @@ htmlcov/
 
 node_modules/
 frontend/dist/
+*.tsbuildinfo
 
 data/raw/*
 !data/raw/.gitkeep
@@ -18,4 +19,3 @@ evaluations/reports/*
 !evaluations/reports/.gitkeep
 
 .DS_Store
-

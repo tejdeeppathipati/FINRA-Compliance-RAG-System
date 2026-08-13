@@ -1,11 +1,13 @@
 # Frontend
 
-The React + TypeScript interface is scheduled for Phase 4, after retrieval and response
-contracts are measured and stable. It will contain two small views:
+Small React + TypeScript evidence viewer for the FastAPI backend. It supports a question,
+retrieval-mode selection, citations, expandable retrieved passages, source links, and the
+explicit abstention state.
 
-1. query, answer, citations, source links, retrieval selector, and expandable evidence;
-2. evaluation run summary with configuration and per-case failures.
+```bash
+npm install
+npm run dev
+```
 
-No placeholder application is included in the baseline to avoid presenting an
-unconnected mock UI as completed functionality.
-
+Vite proxies `/api` requests to `http://localhost:8000`. The evaluation-results view is
+intentionally deferred until the evaluation runner has real saved results to display.
