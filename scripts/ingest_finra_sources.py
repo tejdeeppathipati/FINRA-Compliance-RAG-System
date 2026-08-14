@@ -1,3 +1,5 @@
+"""CLI entry point for normalizing, chunking, and indexing rule snapshots."""
+
 from __future__ import annotations
 
 import argparse

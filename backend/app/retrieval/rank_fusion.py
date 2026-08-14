@@ -1,3 +1,5 @@
+"""Combine ranked retrieval lists with deterministic reciprocal rank fusion."""
+
 from collections.abc import Hashable, Sequence
 from dataclasses import dataclass
 
@@ -28,6 +30,7 @@ def reciprocal_rank_fusion[T](
                 first_seen[item.key] = seen_index
                 seen_index += 1
             values[item.key] = item.value
+            # Each list contributes 1 / (k + rank); shared hits accumulate support.
             scores[item.key] = scores.get(item.key, 0.0) + 1.0 / (rrf_k + rank)
 
     ordered_keys = sorted(scores, key=lambda key: (-scores[key], first_seen[key]))

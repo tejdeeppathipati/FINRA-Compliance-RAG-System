@@ -1,3 +1,4 @@
+// The UI deliberately exposes the answer, citations, and raw evidence together.
 import { StrictMode, useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import "./styles.css";

@@ -1,3 +1,5 @@
+"""Apply deterministic fail-closed scope checks before retrieval or generation."""
+
 from __future__ import annotations
 
 import re

@@ -1,3 +1,5 @@
+"""Run retrieval, evidence formatting, abstention, and query trace logging."""
+
 import time
 from uuid import UUID
 
@@ -24,9 +26,13 @@ def query(
     started = time.perf_counter()
     try:
         query_embedding = None
+        # Scope checks run before retrieval so unsupported questions cannot surface
+        # loosely related FINRA passages as if they answered the question.
         if should_abstain_for_scope(request.question):
             passages = []
         else:
+            # Hybrid retrieval works lexically without a key and adds vector search
+            # only when the configured provider can produce a query embedding.
             if request.retrieval_mode in {"vector", "hybrid"} and has_embedding_credentials():
                 query_embedding = embed_text(request.question, purpose="query")
             if request.retrieval_mode == "keyword":
@@ -64,6 +70,8 @@ def query(
         top_k=request.top_k,
     )
     try:
+        # Persist the evidence IDs and configuration after producing the response so
+        # every demo query can be audited without storing the source documents again.
         session.add(
             QueryLog(
                 question=request.question,

@@ -1,3 +1,4 @@
+// During local development, route browser calls to the FastAPI server.
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 

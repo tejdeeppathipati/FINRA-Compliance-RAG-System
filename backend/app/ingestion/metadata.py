@@ -1,3 +1,5 @@
+"""Represent and write provenance metadata for downloaded source snapshots."""
+
 from __future__ import annotations
 
 import json
@@ -49,4 +51,3 @@ def read_latest_metadata(source_dir: Path) -> dict[str, Any] | None:
         LOGGER.warning("Could not read previous metadata: %s", metadata_files[0])
         return None
     return value if isinstance(value, dict) else None
-

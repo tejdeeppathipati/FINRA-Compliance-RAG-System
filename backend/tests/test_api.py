@@ -1,3 +1,5 @@
+"""Exercise health, query failure modes, and source endpoints."""
+
 from fastapi.testclient import TestClient
 from sqlalchemy.exc import SQLAlchemyError
 

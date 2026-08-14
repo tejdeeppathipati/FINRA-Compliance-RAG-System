@@ -1,3 +1,5 @@
+"""Verify the labeled evaluation set has the intended shape and categories."""
+
 import json
 from collections import Counter
 from pathlib import Path

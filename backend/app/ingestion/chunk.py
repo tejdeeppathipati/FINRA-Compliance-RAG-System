@@ -1,3 +1,5 @@
+"""Split normalized legal sections while preserving section identity and hashes."""
+
 from __future__ import annotations
 
 import hashlib
@@ -65,6 +67,8 @@ def chunk_document(
     active_settings = settings or ChunkSettings()
     chunks: list[TextChunk] = []
     for section in document.sections:
+        # A legal section is the primary boundary; token windows are only a fallback
+        # for sections too large to retrieve effectively as one passage.
         section_chunks = _split_section(section, active_settings)
         for content in section_chunks:
             chunks.append(

@@ -1,3 +1,5 @@
+"""Verify rule parsing, provenance, hashes, and substantive coverage audits."""
+
 import json
 from dataclasses import replace
 from pathlib import Path

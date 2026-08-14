@@ -1,3 +1,5 @@
+"""Verify legal sections remain intact and oversized sections overlap safely."""
+
 from dataclasses import replace
 from pathlib import Path
 

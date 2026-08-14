@@ -1,3 +1,5 @@
+"""Validate and load the FINRA-only source allow-list."""
+
 from __future__ import annotations
 
 import re
@@ -142,4 +144,3 @@ def load_manifest(path: Path) -> SourceManifest:
         allowed_hosts=allowed_hosts,
         sources=sources,
     )
-

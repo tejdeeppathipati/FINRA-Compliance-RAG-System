@@ -1,3 +1,5 @@
+"""Parse FINRA rule HTML into traceable, section-aware normalized documents."""
+
 from __future__ import annotations
 
 import hashlib
@@ -218,6 +220,8 @@ def parse_finra_rule_html(
         if not text:
             continue
         locator = _source_locator(element_index=element_index, text=text)
+        # The footnote table is provenance, while the supplementary-material marker
+        # is layout chrome; both are handled separately from rule text.
         if child.name == "table" and "footnote" in child.get("class", []):
             notices = tuple(_element_text(ref) for ref in child.find_all("ref"))
             history = DocumentHistory(
@@ -238,6 +242,8 @@ def parse_finra_rule_html(
             )
             continue
         if in_supplementary_material:
+            # FINRA sometimes puts continuation paragraphs below a .NN heading,
+            # so unlabelled elements are appended to the preceding subsection.
             match = SUPPLEMENTARY_PATTERN.match(text)
             if not match:
                 if not supplementary_sections:

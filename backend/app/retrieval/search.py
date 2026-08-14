@@ -1,3 +1,5 @@
+"""Implement latest-snapshot keyword, vector, and hybrid passage retrieval."""
+
 from __future__ import annotations
 
 import re
@@ -28,6 +30,8 @@ class RetrievedPassage:
 
 
 def _latest_documents_subquery():
+    # A source can have historical snapshots and multiple chunk configurations;
+    # retrieval should expose only the newest snapshot for each source.
     return (
         select(
             Document.id.label("latest_document_id"),
@@ -138,6 +142,8 @@ def hybrid_search(
     vector_embedding: list[float] | None = None,
     rrf_k: int = 60,
 ) -> list[RetrievedPassage]:
+    # RRF combines independent rank orders, avoiding dependence on incompatible
+    # lexical and cosine score scales.
     keyword = keyword_search(session, question, limit=15)
     rankings: list[list[RankedItem[RetrievedPassage]]] = [
         [RankedItem(passage.chunk_id, passage) for passage in keyword]

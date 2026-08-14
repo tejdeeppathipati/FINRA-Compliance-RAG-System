@@ -1,3 +1,5 @@
+"""Centralize environment-backed application settings."""
+
 from functools import lru_cache
 from typing import Literal
 

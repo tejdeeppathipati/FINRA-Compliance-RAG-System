@@ -1,3 +1,5 @@
+"""Define validated request and response models for the query API."""
+
 from datetime import datetime
 from typing import Literal
 
@@ -38,4 +40,3 @@ class QueryResponse(BaseModel):
     retrieval_configuration: str
     prompt_version: str
     disclaimer: str = "Informational only; not legal, compliance, or investment advice."
-

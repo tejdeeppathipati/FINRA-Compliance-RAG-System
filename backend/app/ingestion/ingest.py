@@ -1,3 +1,5 @@
+"""Persist normalized rule snapshots and configurable chunk variants."""
+
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -41,6 +43,8 @@ def ingest_rule_snapshot(
         )
     )
     if existing is not None:
+        # Re-running ingestion is idempotent, but --embed can backfill vectors on
+        # documents that were initially loaded for keyword-only retrieval.
         if embedding_provider is not None:
             existing_chunks = session.scalars(
                 select(Chunk)
@@ -76,6 +80,7 @@ def ingest_rule_snapshot(
     session.add(document)
     session.flush()
 
+    # Flush the document first so every chunk receives its foreign-key identity.
     for chunk in chunk_document(normalized, active_chunk_settings):
         embedding = embedding_provider(chunk.content) if embedding_provider else None
         session.add(

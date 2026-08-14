@@ -1,3 +1,5 @@
+"""Verify reciprocal rank fusion rewards overlap and remains deterministic."""
+
 from app.retrieval.rank_fusion import RankedItem, reciprocal_rank_fusion
 
 
@@ -18,4 +20,3 @@ def test_rrf_rejects_invalid_constant() -> None:
         assert str(error) == "rrf_k must be positive"
     else:
         raise AssertionError("Expected ValueError")
-

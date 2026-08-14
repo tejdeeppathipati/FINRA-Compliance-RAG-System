@@ -1,3 +1,5 @@
+"""Expose the manifest and local snapshot provenance through read-only endpoints."""
+
 from __future__ import annotations
 
 import json

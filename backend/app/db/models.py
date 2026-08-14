@@ -1,3 +1,5 @@
+"""Define PostgreSQL tables for documents, chunks, traces, and evaluations."""
+
 from __future__ import annotations
 
 import uuid

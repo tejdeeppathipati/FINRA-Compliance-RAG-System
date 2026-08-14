@@ -1,3 +1,5 @@
+"""Run the reproducible local retrieval baseline and write CSV results."""
+
 from __future__ import annotations
 
 import argparse

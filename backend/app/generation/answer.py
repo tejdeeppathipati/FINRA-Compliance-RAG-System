@@ -1,3 +1,5 @@
+"""Turn retrieved passages into a citation-bearing, evidence-only response."""
+
 from __future__ import annotations
 
 from collections.abc import Sequence
@@ -63,4 +65,3 @@ def build_grounded_response(
         retrieval_configuration=retrieval_configuration,
         prompt_version=PROMPT_VERSION,
     )
-

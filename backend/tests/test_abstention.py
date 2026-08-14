@@ -1,3 +1,5 @@
+"""Verify deterministic out-of-scope questions fail closed."""
+
 import pytest
 
 from app.generation.abstention import should_abstain_for_scope

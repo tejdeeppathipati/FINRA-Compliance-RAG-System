@@ -1,3 +1,5 @@
+"""Verify database metadata matches the traceable retrieval schema."""
+
 from pgvector.sqlalchemy import VECTOR
 from sqlalchemy.dialects.postgresql import TSVECTOR
 

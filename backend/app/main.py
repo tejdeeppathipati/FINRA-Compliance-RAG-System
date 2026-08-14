@@ -1,3 +1,5 @@
+"""Create the FastAPI application and register the public API routers."""
+
 from fastapi import FastAPI
 
 from app.api.health import router as health_router

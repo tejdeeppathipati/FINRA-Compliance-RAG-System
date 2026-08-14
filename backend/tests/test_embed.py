@@ -1,3 +1,5 @@
+"""Verify provider selection and Gemini embedding request configuration."""
+
 from types import SimpleNamespace
 
 from app.config import Settings

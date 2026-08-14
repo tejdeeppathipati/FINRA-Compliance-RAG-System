@@ -1,3 +1,5 @@
+"""Provide interchangeable OpenAI/Gemini embedding adapters for retrieval."""
+
 from __future__ import annotations
 
 from typing import Literal
@@ -36,6 +38,8 @@ def embed_text(
 ) -> list[float]:
     active_settings = settings or get_settings()
     if active_settings.embedding_provider == "gemini":
+        # Gemini distinguishes stored-document and live-query embeddings; using the
+        # matching task type improves semantic retrieval quality.
         if not active_settings.gemini_api_key:
             raise EmbeddingProviderError("GEMINI_API_KEY is not configured")
         client = genai.Client(api_key=active_settings.gemini_api_key)

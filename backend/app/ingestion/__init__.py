@@ -3,4 +3,4 @@
 from app.ingestion.manifest import Source, SourceManifest, SourceType, load_manifest
 
 __all__ = ["Source", "SourceManifest", "SourceType", "load_manifest"]
-
+"""Source fetching, normalization, chunking, and indexing components."""

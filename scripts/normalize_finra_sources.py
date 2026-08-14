@@ -1,3 +1,5 @@
+"""CLI entry point for section-aware rule normalization."""
+
 from __future__ import annotations
 
 import argparse
