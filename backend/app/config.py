@@ -1,3 +1,5 @@
+"""Centralize environment-backed application settings."""
+
 from functools import lru_cache
 from typing import Literal
 
@@ -17,8 +19,12 @@ class Settings(BaseSettings):
     database_url: str = "postgresql+psycopg://finra:finra@localhost:5432/finra_rag"
     database_direct_url: str | None = None
     openai_api_key: str | None = None
+    gemini_api_key: str | None = None
+    embedding_provider: Literal["openai", "gemini"] = "openai"
     embedding_model: str = "text-embedding-3-small"
-    generation_model: str = "gpt-4.1-mini"
+    gemini_embedding_model: str = "gemini-embedding-001"
+    generation_provider: Literal["none", "gemini"] = "none"
+    generation_model: str = "gemini-2.5-flash"
     prompt_version: str = "finra-grounded-v1"
     default_retrieval_mode: Literal["vector", "keyword", "hybrid"] = "hybrid"
     default_top_k: int = Field(default=5, ge=1, le=20)

@@ -1,7 +1,10 @@
+"""Create the FastAPI application and register the public API routers."""
+
 from fastapi import FastAPI
 
 from app.api.health import router as health_router
 from app.api.query import router as query_router
+from app.api.sources import router as sources_router
 
 app = FastAPI(
     title="FINRA Compliance RAG & Evaluation System",
@@ -10,4 +13,4 @@ app = FastAPI(
 )
 app.include_router(health_router, prefix="/api")
 app.include_router(query_router, prefix="/api")
-
+app.include_router(sources_router, prefix="/api")

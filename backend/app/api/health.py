@@ -1,3 +1,5 @@
+"""Expose a lightweight liveness endpoint for local and deployed checks."""
+
 from fastapi import APIRouter
 
 router = APIRouter(tags=["system"])
@@ -6,4 +8,3 @@ router = APIRouter(tags=["system"])
 @router.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok", "service": "finra-compliance-rag"}
-

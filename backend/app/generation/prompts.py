@@ -1,3 +1,5 @@
+"""Versioned instructions for any future grounded generation provider."""
+
 SYSTEM_PROMPT = """You are a FINRA rule retrieval assistant.
 
 Answer using only the supplied source passages.
@@ -16,4 +18,3 @@ Distinguish rule text from explanatory guidance.
 
 PROMPT_VERSION = "finra-grounded-v1"
 ABSTENTION_TEXT = "Insufficient evidence in the indexed FINRA sources."
-

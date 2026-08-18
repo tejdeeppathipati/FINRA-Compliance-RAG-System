@@ -1,3 +1,5 @@
+"""Fetch approved FINRA pages into timestamped, hashed local snapshots."""
+
 from __future__ import annotations
 
 import asyncio

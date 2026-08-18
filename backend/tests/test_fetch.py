@@ -1,3 +1,5 @@
+"""Verify fetching is allow-listed, hashed, and resilient to HTTP behavior."""
+
 import asyncio
 import json
 from datetime import UTC, datetime

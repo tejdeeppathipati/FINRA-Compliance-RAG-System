@@ -1,3 +1,5 @@
+"""Verify rule parsing, provenance, hashes, and substantive coverage audits."""
+
 import json
 from dataclasses import replace
 from pathlib import Path
@@ -9,6 +11,7 @@ from app.ingestion.manifest import Source, SourceType
 from app.ingestion.normalize import (
     compute_normalized_content_hash,
     normalize_rule_snapshot,
+    parse_finra_guidance_html,
     parse_finra_rule_html,
     write_normalized_document,
 )
@@ -141,3 +144,60 @@ def test_snapshot_normalization_rejects_hash_mismatch(tmp_path: Path) -> None:
             metadata_path=metadata_path,
             source=SOURCE,
         )
+
+
+def test_supplementary_marker_is_not_triggered_by_rule_body_reference() -> None:
+    source = replace(SOURCE, source_id="finra-rule-4512", rule_number="4512")
+    html = b"""
+    <html><body><div id="block-body"><div class="field--name-body">
+      <div>(a) Each member shall maintain information subject to Supplementary Material .06.</div>
+      <div>(1) The member shall record the account information.</div>
+      <hr />
+      <p><strong>Supplementary Material: --------------</strong></p>
+      <p><strong>.01 Trusted Contact Person.</strong> The member may contact the
+      trusted contact.</p>
+      <table class="table footnote"><tr><td>Adopted by SR-FINRA-2010-052 eff.
+      Dec. 5, 2011.</td></tr></table>
+    </div></div></body></html>
+    """
+    document = parse_finra_rule_html(html, source=source, metadata=metadata_for(html))
+
+    assert document.sections[0].section_path == "4512 > (a)"
+    assert "Supplementary Material .06" in document.sections[0].content
+    assert document.sections[-1].label == ".01"
+    assert document.audit.exact_substantive_match is True
+
+
+def test_guidance_parser_preserves_heading_paths_and_lists() -> None:
+    source = Source(
+        source_id="finra-guidance-bcp",
+        rule_number=None,
+        title="Business Continuity Planning Guidance",
+        source_type=SourceType.GUIDANCE,
+        url="https://www.finra.org/rules-guidance/key-topics/business-continuity-planning",
+    )
+    html = b"""
+    <html><body><main>
+      <h1>Business Continuity Planning</h1>
+      <p>Firms must maintain written continuity plans.</p>
+      <h2>What to Include</h2>
+      <p>The plan should address critical operations.</p>
+      <ul><li>Data backup and recovery.</li><li>Alternate communications.</li></ul>
+    </main></body></html>
+    """
+    document = parse_finra_guidance_html(
+        html,
+        source=source,
+        metadata={
+            "source_id": source.source_id,
+            "retrieved_at": RETRIEVED_AT,
+            "html_file": "guidance.html",
+        },
+    )
+
+    assert document.source_type == "guidance"
+    assert document.rule_number is None
+    assert len(document.sections) == 2
+    assert document.sections[1].section_path.endswith(" > What to Include")
+    assert "Data backup" in document.sections[1].content
+    assert document.audit.exact_substantive_match is True

@@ -1,3 +1,4 @@
+# This manifest is the only corpus authority; fetchers reject hosts outside this list.
 version: 1
 corpus_name: finra-compliance-rag
 scope: finra-only
@@ -79,4 +80,3 @@ sources:
     title: FINRA Rulebook Search Tool (FIRST) Overview
     source_type: guidance
     url: https://www.finra.org/rules-guidance/rulebooks/finra-rulebook-search-tool-first
-

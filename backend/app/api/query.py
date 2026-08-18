@@ -1,14 +1,94 @@
-from fastapi import APIRouter, HTTPException, status
+"""Run retrieval, evidence formatting, abstention, and query trace logging."""
 
+import time
+from uuid import UUID
+
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm import Session
+
+from app.db.models import QueryLog
+from app.db.session import get_db_session
+from app.generation.abstention import should_abstain_for_scope
+from app.generation.answer import build_grounded_response
+from app.ingestion.embed import EmbeddingProviderError, embed_text, has_embedding_credentials
+from app.retrieval.search import hybrid_search, keyword_search, vector_search
 from app.schemas.query import QueryRequest, QueryResponse
 
 router = APIRouter(tags=["query"])
 
 
 @router.post("/query", response_model=QueryResponse)
-def query(_: QueryRequest) -> QueryResponse:
-    raise HTTPException(
-        status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="Query pipeline is not implemented in the baseline.",
+def query(
+    request: QueryRequest,
+    session: Session = Depends(get_db_session),  # noqa: B008
+) -> QueryResponse:
+    started = time.perf_counter()
+    try:
+        query_embedding = None
+        # Scope checks run before retrieval so unsupported questions cannot surface
+        # loosely related FINRA passages as if they answered the question.
+        if should_abstain_for_scope(request.question):
+            passages = []
+        else:
+            # Hybrid retrieval works lexically without a key and adds vector search
+            # only when the configured provider can produce a query embedding.
+            if request.retrieval_mode in {"vector", "hybrid"} and has_embedding_credentials():
+                query_embedding = embed_text(request.question, purpose="query")
+            if request.retrieval_mode == "keyword":
+                passages = keyword_search(session, request.question, limit=request.top_k)
+            elif request.retrieval_mode == "vector":
+                if query_embedding is None:
+                    raise HTTPException(
+                        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                        detail="Vector retrieval requires a configured embedding provider key.",
+                    )
+                passages = vector_search(session, query_embedding, limit=request.top_k)
+            else:
+                passages = hybrid_search(
+                    session,
+                    request.question,
+                    limit=request.top_k,
+                    vector_embedding=query_embedding,
+                )
+    except EmbeddingProviderError as error:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"Embedding provider unavailable: {error}",
+        ) from error
+    except SQLAlchemyError as error:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Database is unavailable. Start PostgreSQL and apply migrations.",
+        ) from error
+    configuration = f"{request.retrieval_mode}-top-{request.top_k}"
+    if request.retrieval_mode == "hybrid" and query_embedding is None:
+        configuration = f"hybrid-keyword-only-top-{request.top_k}"
+    response = build_grounded_response(
+        passages,
+        question=request.question,
+        retrieval_configuration=configuration,
+        top_k=request.top_k,
     )
-
+    try:
+        # Persist the evidence IDs and configuration after producing the response so
+        # every demo query can be audited without storing the source documents again.
+        session.add(
+            QueryLog(
+                question=request.question,
+                answer=response.answer,
+                abstained=response.abstained,
+                retrieved_chunk_ids=[UUID(chunk.chunk_id) for chunk in response.retrieved_chunks],
+                retrieval_configuration={
+                    "mode": request.retrieval_mode,
+                    "top_k": request.top_k,
+                    "configuration": configuration,
+                },
+                prompt_version=response.prompt_version,
+                latency_ms=max(0, int((time.perf_counter() - started) * 1000)),
+            )
+        )
+        session.commit()
+    except SQLAlchemyError:
+        session.rollback()
+    return response

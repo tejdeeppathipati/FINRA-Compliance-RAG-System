@@ -1,3 +1,5 @@
+"""Verify manifest validation prevents out-of-scope or malformed sources."""
+
 from pathlib import Path
 
 import pytest
@@ -87,4 +89,3 @@ def test_manifest_selection_preserves_manifest_order(tmp_path: Path) -> None:
     ]
     with pytest.raises(ValueError, match="Unknown source IDs: missing"):
         manifest.select({"missing"})
-

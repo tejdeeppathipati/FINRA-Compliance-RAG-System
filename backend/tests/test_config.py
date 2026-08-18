@@ -1,3 +1,5 @@
+"""Verify safe defaults for retrieval and application settings."""
+
 from app.config import Settings
 
 

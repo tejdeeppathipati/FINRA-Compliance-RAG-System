@@ -1,12 +1,15 @@
+"""CLI entry point for section-aware rule normalization."""
+
 from __future__ import annotations
 
 import argparse
 import logging
 from pathlib import Path
 
-from app.ingestion.manifest import SourceType, load_manifest
+from app.ingestion.manifest import load_manifest
 from app.ingestion.normalize import (
     latest_snapshot_paths,
+    normalize_guidance_snapshot,
     normalize_rule_snapshot,
     write_normalized_document,
 )
@@ -37,14 +40,13 @@ def run(args: argparse.Namespace) -> int:
     failures = 0
     for source in sources:
         try:
-            if source.source_type is not SourceType.RULE:
-                raise ValueError(f"{source.source_id}: guidance parsing is not implemented yet")
             html_path, metadata_path = latest_snapshot_paths(args.raw_dir, source)
-            document = normalize_rule_snapshot(
-                html_path=html_path,
-                metadata_path=metadata_path,
-                source=source,
+            normalizer = (
+                normalize_rule_snapshot
+                if source.source_type.value == "rule"
+                else normalize_guidance_snapshot
             )
+            document = normalizer(html_path=html_path, metadata_path=metadata_path, source=source)
             output_path = write_normalized_document(document, args.output)
             LOGGER.info(
                 "%s normalized into %s sections: %s",
