@@ -10,8 +10,8 @@ from pathlib import Path
 from app.db.session import SessionLocal
 from app.ingestion.chunk import ChunkSettings
 from app.ingestion.embed import embed_text, embedding_model_name
-from app.ingestion.ingest import ingest_rule_snapshot
-from app.ingestion.manifest import SourceType, load_manifest
+from app.ingestion.ingest import ingest_source_snapshot
+from app.ingestion.manifest import load_manifest
 
 LOGGER = logging.getLogger(__name__)
 
@@ -39,10 +39,7 @@ def run(args: argparse.Namespace) -> int:
     embedding_model = embedding_model_name() if args.embed else None
     with SessionLocal.begin() as session:
         for source in sources:
-            if source.source_type is not SourceType.RULE:
-                LOGGER.error("%s: guidance ingestion is not implemented yet", source.source_id)
-                return 2
-            document, inserted = ingest_rule_snapshot(
+            document, inserted = ingest_source_snapshot(
                 session,
                 source=source,
                 raw_dir=args.raw_dir,

@@ -14,11 +14,12 @@ from app.ingestion.chunk import ChunkSettings, chunk_document
 from app.ingestion.manifest import Source
 from app.ingestion.normalize import (
     latest_snapshot_paths,
+    normalize_guidance_snapshot,
     normalize_rule_snapshot,
 )
 
 
-def ingest_rule_snapshot(
+def ingest_source_snapshot(
     session: Session,
     *,
     source: Source,
@@ -28,11 +29,12 @@ def ingest_rule_snapshot(
     embedding_model: str | None = None,
 ) -> tuple[Document, bool]:
     html_path, metadata_path = latest_snapshot_paths(raw_dir, source)
-    normalized = normalize_rule_snapshot(
-        html_path=html_path,
-        metadata_path=metadata_path,
-        source=source,
+    normalizer = (
+        normalize_rule_snapshot
+        if source.source_type.value == "rule"
+        else normalize_guidance_snapshot
     )
+    normalized = normalizer(html_path=html_path, metadata_path=metadata_path, source=source)
     active_chunk_settings = chunk_settings or ChunkSettings()
     existing = session.scalar(
         select(Document).where(
@@ -98,3 +100,7 @@ def ingest_rule_snapshot(
         )
     session.flush()
     return document, True
+
+
+# Backward-compatible name for callers that only ingest rule sources.
+ingest_rule_snapshot = ingest_source_snapshot

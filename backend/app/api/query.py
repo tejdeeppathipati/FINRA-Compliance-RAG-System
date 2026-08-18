@@ -66,6 +66,7 @@ def query(
         configuration = f"hybrid-keyword-only-top-{request.top_k}"
     response = build_grounded_response(
         passages,
+        question=request.question,
         retrieval_configuration=configuration,
         top_k=request.top_k,
     )

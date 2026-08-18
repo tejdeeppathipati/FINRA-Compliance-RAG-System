@@ -18,6 +18,7 @@ from app.ingestion.manifest import Source, SourceType
 PARSER_VERSION = "finra-rule-parser-v3"
 NORMALIZED_SCHEMA_VERSION = 2
 RULE_BODY_SELECTOR = "#block-body .field--name-body"
+GUIDANCE_BODY_SELECTOR = "#block-body, main"
 SUPPLEMENTARY_PATTERN = re.compile(r"^\.(\d{2})\s+(.+)$", re.DOTALL)
 TOP_LEVEL_PATTERN = re.compile(r"^\(([a-z])\)\s+(.+)$", re.DOTALL)
 NUMBERED_PATTERN = re.compile(r"^\((\d+)\)\s+(.+)$", re.DOTALL)
@@ -43,7 +44,7 @@ class NormalizedSection:
     display_label: str
     heading_source: Literal["official", "synthetic"]
     section_path: str
-    section_type: Literal["rule_text", "supplementary"]
+    section_type: Literal["rule_text", "supplementary", "guidance"]
     content: str
     source_locators: tuple[SourceLocator, ...]
 
@@ -83,9 +84,9 @@ class NormalizedDocument:
     schema_version: int
     parser_version: str
     source_id: str
-    rule_number: str
+    rule_number: str | None
     title: str
-    source_type: Literal["rule"]
+    source_type: Literal["rule", "guidance"]
     source_url: str
     raw_snapshot_file: str
     retrieved_at: str
@@ -120,9 +121,14 @@ def _text_hash(value: str) -> str:
     return hashlib.sha256(value.encode()).hexdigest()
 
 
-def _source_locator(*, element_index: int, text: str) -> SourceLocator:
+def _source_locator(
+    *,
+    element_index: int,
+    text: str,
+    selector: str = RULE_BODY_SELECTOR,
+) -> SourceLocator:
     return SourceLocator(
-        selector=f"{RULE_BODY_SELECTOR} > :nth-child({element_index + 1})",
+        selector=f"{selector} > :nth-child({element_index + 1})",
         element_index=element_index,
         source_text_hash=_text_hash(text),
     )
@@ -456,6 +462,129 @@ def parse_finra_rule_html(
     )
 
 
+def parse_finra_guidance_html(
+    html: bytes,
+    *,
+    source: Source,
+    metadata: dict[str, Any],
+) -> NormalizedDocument:
+    """Normalize guidance headings, paragraphs, and lists into searchable sections."""
+    if source.source_type is not SourceType.GUIDANCE:
+        raise ValueError(f"{source.source_id}: guidance parser requires a guidance source")
+
+    soup = BeautifulSoup(html, "html.parser")
+    body = soup.select_one("#block-body") or soup.select_one("main")
+    if body is None:
+        raise ValueError(f"{source.source_id}: guidance body was not found")
+
+    sections: list[NormalizedSection] = []
+    source_locators: list[SourceLocator] = []
+    source_text_by_index: dict[int, str] = {}
+    active: dict[str, Any] | None = None
+    heading_stack: list[str] = []
+    selector = "#block-body" if body.get("id") == "block-body" else "main"
+
+    def flush() -> None:
+        if active is None:
+            return
+        if not active["content"] and active["heading"]:
+            # Keep standalone headings traceable even when the page places no
+            # paragraph directly beneath them.
+            active["content"].append(active["heading"])
+        sections.append(
+            NormalizedSection(
+                label=None,
+                heading=active["heading"],
+                display_label=active["heading"] or "Guidance introduction",
+                heading_source="official" if active["heading"] else "synthetic",
+                section_path=" > ".join([source.title, *active["path"]]),
+                section_type="guidance",
+                content="\n\n".join(active["content"]),
+                source_locators=tuple(active["locators"]),
+            )
+        )
+
+    elements = body.find_all(["h1", "h2", "h3", "h4", "p", "li"])
+    for element_index, element in enumerate(elements):
+        text = _element_text(element)
+        if not text:
+            continue
+        locator = _source_locator(
+            element_index=element_index,
+            text=text,
+            selector=selector,
+        )
+        source_text_by_index[element_index] = text
+        source_locators.append(locator)
+        if element.name.startswith("h"):
+            flush()
+            level = int(element.name[1]) - 1
+            heading_stack = heading_stack[:level]
+            heading_stack.append(text)
+            active = {
+                "heading": text,
+                "path": list(heading_stack),
+                "content": [],
+                "locators": [locator],
+            }
+            continue
+        if active is None:
+            active = {"heading": None, "path": [], "content": [], "locators": []}
+        active["content"].append(text)
+        active["locators"].append(locator)
+    flush()
+
+    if not sections:
+        raise ValueError(f"{source.source_id}: extracted guidance content is empty")
+    source_indices = sorted(locator.element_index for locator in source_locators)
+    covered_indices = sorted(
+        locator.element_index
+        for section in sections
+        for locator in section.source_locators
+    )
+    source_characters = sum(len(text) for text in source_text_by_index.values())
+    covered_characters = sum(
+        len(source_text_by_index[index])
+        for index in covered_indices
+        if index in source_text_by_index
+    )
+    audit = NormalizationAudit(
+        substantive_source_characters=source_characters,
+        covered_substantive_characters=covered_characters,
+        coverage_ratio=covered_characters / source_characters if source_characters else 0.0,
+        exact_substantive_match=source_indices == covered_indices,
+        excluded_elements=(),
+    )
+    if not audit.exact_substantive_match or audit.coverage_ratio != 1.0:
+        missing = sorted(set(source_indices) - set(covered_indices))
+        extra = sorted(set(covered_indices) - set(source_indices))
+        raise ValueError(
+            f"{source.source_id}: guidance content failed coverage validation "
+            f"(missing={missing}, extra={extra}, source_chars={source_characters}, "
+            f"covered_chars={covered_characters})"
+        )
+
+    document = NormalizedDocument(
+        schema_version=NORMALIZED_SCHEMA_VERSION,
+        parser_version="finra-guidance-parser-v1",
+        source_id=source.source_id,
+        rule_number=source.rule_number,
+        title=source.title,
+        source_type="guidance",
+        source_url=source.url,
+        raw_snapshot_file=str(metadata["html_file"]),
+        retrieved_at=str(metadata["retrieved_at"]),
+        latest_effective_date=None,
+        effective_date_evidence=None,
+        raw_content_hash=sha256_bytes(html),
+        normalized_content_hash="",
+        sections=tuple(sections),
+        history=None,
+        audit=audit,
+    )
+    return replace(document, normalized_content_hash=compute_normalized_content_hash(document))
+
+
 def normalize_rule_snapshot(
     *,
     html_path: Path,
@@ -474,6 +603,25 @@ def normalize_rule_snapshot(
     if metadata.get("content_sha256") != raw_hash:
         raise ValueError(f"{source.source_id}: raw snapshot hash does not match metadata")
     return parse_finra_rule_html(html, source=source, metadata=metadata)
+
+
+def normalize_guidance_snapshot(
+    *,
+    html_path: Path,
+    metadata_path: Path,
+    source: Source,
+) -> NormalizedDocument:
+    html = html_path.read_bytes()
+    metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+    if not isinstance(metadata, dict):
+        raise ValueError(f"{metadata_path}: metadata root must be an object")
+    if metadata.get("source_id") != source.source_id:
+        raise ValueError(f"{source.source_id}: snapshot metadata source_id does not match manifest")
+    if metadata.get("html_file") != html_path.name:
+        raise ValueError(f"{source.source_id}: metadata html_file does not match snapshot filename")
+    if metadata.get("content_sha256") != sha256_bytes(html):
+        raise ValueError(f"{source.source_id}: raw snapshot hash does not match metadata")
+    return parse_finra_guidance_html(html, source=source, metadata=metadata)
 
 
 def latest_snapshot_paths(raw_dir: Path, source: Source) -> tuple[Path, Path]:

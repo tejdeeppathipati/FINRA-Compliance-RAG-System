@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
+from app.config import get_settings
+from app.generation.gemini import GenerationProviderError, generate_grounded_answer
 from app.generation.prompts import ABSTENTION_TEXT, PROMPT_VERSION
 from app.retrieval.search import RetrievedPassage
 from app.schemas.query import Citation, QueryResponse, RetrievedChunk
@@ -12,6 +14,7 @@ from app.schemas.query import Citation, QueryResponse, RetrievedChunk
 def build_grounded_response(
     passages: Sequence[RetrievedPassage],
     *,
+    question: str | None = None,
     retrieval_configuration: str,
     top_k: int,
 ) -> QueryResponse:
@@ -50,6 +53,31 @@ def build_grounded_response(
         )
         for passage in selected
     ]
+    # The deterministic evidence response is the safety fallback. Gemini can replace
+    # only the prose/citation fields after its citations have been checked.
+    if question and get_settings().generation_provider == "gemini":
+        try:
+            generated = generate_grounded_answer(question, selected)
+            if generated.abstained:
+                return QueryResponse(
+                    answer=ABSTENTION_TEXT,
+                    citations=[],
+                    abstained=True,
+                    retrieved_chunks=chunks,
+                    retrieval_configuration=retrieval_configuration,
+                    prompt_version=PROMPT_VERSION,
+                )
+            return QueryResponse(
+                answer=generated.answer,
+                citations=generated.citations,
+                abstained=False,
+                retrieved_chunks=chunks,
+                retrieval_configuration=retrieval_configuration,
+                prompt_version=PROMPT_VERSION,
+            )
+        except GenerationProviderError:
+            pass
+
     evidence = "\n\n".join(
         f"[{index}] {passage.content}" for index, passage in enumerate(selected, start=1)
     )

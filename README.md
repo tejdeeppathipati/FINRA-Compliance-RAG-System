@@ -19,7 +19,7 @@ Implemented now:
 - manifest-driven FINRA source allow-list for 8 rules and 5 guidance pages;
 - polite snapshot fetching with retrieval timestamps, effective-date evidence, and
   SHA-256 provenance hashes;
-- rule-body parsing that preserves top-level sections, numbered subsections,
+- rule-body and guidance-page parsing that preserves headings, numbered subsections,
   supplementary material, source locators, and parser/audit metadata;
 - section-aware 600-token chunks with 50-token overlap only inside oversized sections;
 - PostgreSQL/pgvector models and Alembic migrations for documents, chunks, query logs,
@@ -29,8 +29,11 @@ Implemented now:
 - deterministic evidence-only answer formatting with rule/subsection citations and
   fail-closed abstention;
 - configurable OpenAI or Gemini embeddings, with Gemini set up for this project;
+- optional Gemini grounded answer generation with exact evidence/citation validation;
+- retrieval evaluation across keyword-only, vector-only, and hybrid modes, including
+  Recall@3/5, MRR, rule retrieval, subsection retrieval, and abstention accuracy;
 - `/api/health`, `/api/sources`, `/api/sources/{source_id}`, and `/api/query`;
-- 39 automated tests plus Ruff linting, and a production-buildable React evidence viewer.
+- 41 automated tests plus Ruff linting, and a production-buildable React evidence viewer.
 
 The answer layer is intentionally conservative until a generation model is configured:
 it returns retrieved evidence rather than inventing a prose answer. This makes the
@@ -173,11 +176,20 @@ done
 
 The rule parser selects only FINRA's rule-body block, preserves main versus supplementary
 material, records amendment history and explicit effective-date evidence, and computes a
-stable normalized-content hash. Each section records exact source-element locators and
-source-text hashes, while an embedded audit reports substantive coverage and intentional
-exclusions. Synthetic display labels are explicitly distinguished from official FINRA
-headings. Guidance pages still require a separate parser and are rejected explicitly by
-the rule-only normalization command.
+stable normalized-content hash. The guidance parser preserves page headings and list
+content while recording the same provenance metadata. Each section records exact
+source-element locators and source-text hashes, while an embedded audit reports
+substantive coverage and intentional exclusions. Synthetic display labels are explicitly
+distinguished from official FINRA headings.
+
+Normalize guidance snapshots with the same manifest-driven command:
+
+```bash
+for id in finra-guidance-2111-faq finra-guidance-supervision \
+  finra-guidance-books-records finra-guidance-bcp finra-guidance-first-overview; do
+  python scripts/normalize_finra_sources.py --source-id "$id"
+done
+```
 
 After PostgreSQL is running and migrations are applied, ingest normalized rule snapshots
 and chunks (without embeddings):
@@ -193,6 +205,10 @@ embeddings for an already-ingested document whose chunks do not yet have vectors
 ```bash
 python scripts/ingest_finra_sources.py --source-id finra-rule-2090 --embed
 ```
+
+The ingestion command supports both `rule` and `guidance` manifest entries. Guidance
+chunks are labeled `source_type=guidance` so the answer layer can distinguish
+explanatory material from binding rule text.
 
 ## API contract
 
@@ -229,8 +245,24 @@ Recall@5, MRR, correct-rule rate, and correct-subsection rate. Answer metrics ar
 citation correctness/completeness, groundedness, abstention accuracy, and unsupported
 claim count.
 
-There are deliberately no performance percentages in this README yet. They will be
-added only from saved, reproducible evaluation reports.
+Run the local retrieval evaluation after the corpus is ingested:
+
+```bash
+PYTHONPATH=backend python evaluations/run_retrieval_eval.py \
+  --modes keyword vector hybrid --top-k 3 5 8
+```
+
+Vector and true hybrid modes require the configured embedding provider key. The runner
+writes a row-level CSV and a summary JSON under ignored `evaluations/reports/`; it does
+not claim a vector result when the key is unavailable.
+
+There are deliberately no final performance percentages in this README yet. They will
+be added only from saved, reproducible evaluation reports.
+
+To enable Gemini grounded prose after retrieval quality is measured, set
+`GENERATION_PROVIDER=gemini` and `GEMINI_API_KEY` in `.env`. The generator must return
+structured JSON, and every citation/excerpt is checked against the retrieved passages;
+invalid or unsupported output falls back to the deterministic evidence response.
 
 ## Key design rules
 
@@ -249,11 +281,11 @@ See [the project plan](docs/PROJECT_PLAN.md) and the
 
 The next implementation increments are deliberately separate from the ingestion core:
 
-1. Add a guidance-page parser and ingest the five explanatory pages.
-2. Start PostgreSQL, run `alembic upgrade head`, and ingest all eight rule snapshots.
-3. Extend the deterministic retrieval runner to vector-enabled configurations and add
-   subsection/citation/groundedness scoring.
-4. Add protected admin/evaluation endpoints and hosted database/provider-secret setup.
+1. Run the true vector/hybrid benchmark after configuring the Gemini embedding key and
+   commit the resulting report summary.
+2. Add protected admin/evaluation endpoints and hosted database/provider-secret setup.
+3. Expand answer-level evaluation (citation completeness, groundedness, and unsupported
+   claim counts) over the measured retrieval configurations.
 
 These are visible follow-on tasks; none should be represented as completed until their
 commands and tests have actually run.
