@@ -23,13 +23,14 @@ class Settings(BaseSettings):
     embedding_provider: Literal["openai", "gemini"] = "openai"
     embedding_model: str = "text-embedding-3-small"
     gemini_embedding_model: str = "gemini-embedding-001"
-    generation_provider: Literal["none", "gemini"] = "none"
-    generation_model: str = "gemini-2.5-flash"
+    generation_provider: Literal["none", "openai", "gemini"] = "none"
+    generation_model: str = "gpt-4.1-mini"
     prompt_version: str = "finra-grounded-v1"
     default_retrieval_mode: Literal["vector", "keyword", "hybrid"] = "hybrid"
     default_top_k: int = Field(default=5, ge=1, le=20)
     rrf_k: int = Field(default=60, ge=1)
     request_timeout_seconds: float = Field(default=30, gt=0)
+    cors_origins: str = ""
 
     @property
     def migration_database_url(self) -> str:

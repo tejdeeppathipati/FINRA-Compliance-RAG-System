@@ -53,7 +53,7 @@ FINRA pages
    -> PostgreSQL + pgvector + full-text search
    -> keyword/vector/hybrid retrieval
    -> evidence validation
-   -> deterministic response or optional Gemini grounded answer
+   -> deterministic response or optional OpenAI grounded answer
    -> citations, evidence, and trace log
 ```
 
@@ -61,7 +61,7 @@ FINRA pages
 
 - Backend: Python, FastAPI, SQLAlchemy, Alembic, pytest, Ruff
 - Database: PostgreSQL 16 with the pgvector extension
-- Embeddings and optional generation: Gemini or OpenAI adapters
+- Embeddings and optional generation: OpenAI (Gemini remains an optional adapter)
 - Parsing: BeautifulSoup
 - Frontend: React, TypeScript, Vite
 - Local infrastructure: Docker Compose
@@ -81,9 +81,9 @@ Requirements: Python 3.12+, Docker Desktop, and Node.js 18+.
    cd ..
    ```
 
-   Set `GEMINI_API_KEY` in `.env` if you want Gemini embeddings or generation. The
-   default configuration is safe without a generation key: it returns retrieved
-   evidence rather than generating unsupported prose.
+   Set `OPENAI_API_KEY` in `.env` for embeddings and grounded generation. The default
+   configuration is safe without a generation key: it returns retrieved evidence rather
+   than generating unsupported prose.
 
 2. Start PostgreSQL and apply the schema:
 
@@ -125,6 +125,34 @@ Requirements: Python 3.12+, Docker Desktop, and Node.js 18+.
    npm run dev
    ```
 
+## Deploy with Supabase and Render
+
+The production layout uses Supabase for managed PostgreSQL/pgvector, Render for the
+FastAPI container, and Vercel (or another static host) for the React frontend.
+
+1. Create a Supabase project and copy both connection strings from its Connect panel.
+   Use the pooled URL for `DATABASE_URL` and the direct/session URL for
+   `DATABASE_DIRECT_URL`. Convert each prefix to `postgresql+psycopg://` and retain
+   `sslmode=require` when present.
+2. Create an OpenAI project/API key. Keep it server-side; never place it in the React
+   environment or commit it. OpenAI documents environment-variable configuration in
+   its [developer quickstart](https://platform.openai.com/docs/quickstart/make-your-first-api-request).
+3. In Render, create a Blueprint from this repository. [`render.yaml`](render.yaml)
+   defines the Docker service, health check, and migration command. Set the secret
+   values `DATABASE_URL`, `DATABASE_DIRECT_URL`, `OPENAI_API_KEY`, and
+   `CORS_ORIGINS` in the Render dashboard.
+4. Run the source fetch/normalize/embedding workflow from a trusted local machine (or
+   a protected one-off job) using the Supabase URLs. Do not put raw FINRA snapshots in
+   the container image. Embedding the corpus populates the production database.
+5. Deploy `frontend/` to Vercel or another static host and set
+   `VITE_API_BASE_URL` to the public Render API URL. Set the same frontend URL in the
+   backend's `CORS_ORIGINS` value, separated by commas for multiple origins.
+
+The first deployment should be verified in this order: `GET /api/health`,
+`GET /api/sources`, one keyword query, one vector query, and one intentionally
+unsupported question. Only after vector retrieval succeeds should you run the full
+evaluation benchmark.
+
 ## Query API
 
 `POST /api/query` accepts a question and retrieval configuration:
@@ -147,22 +175,24 @@ Other available endpoints are `GET /api/health`, `GET /api/sources`, and
 `GET /api/sources/{source_id}`. Administrative sync and evaluation endpoints are not
 exposed yet.
 
-## Gemini configuration
+## OpenAI configuration
 
-Gemini can be used for both retrieval embeddings and optional answer generation:
+OpenAI is the primary provider for both retrieval embeddings and grounded answer
+generation:
 
 ```env
-GEMINI_API_KEY=your-key
-EMBEDDING_PROVIDER=gemini
-GENERATION_PROVIDER=gemini
-GEMINI_EMBEDDING_MODEL=gemini-embedding-001
-GENERATION_MODEL=gemini-2.5-flash
+OPENAI_API_KEY=your-key
+EMBEDDING_PROVIDER=openai
+EMBEDDING_MODEL=text-embedding-3-small
+GENERATION_PROVIDER=openai
+GENERATION_MODEL=gpt-4.1-mini
 ```
 
 The answer generator receives only retrieved passages. Its citations must match a
 retrieved rule/subsection/source URL, and each supporting excerpt must be present in the
 retrieved text. Invalid or unsupported model output falls back to the deterministic
-evidence response.
+evidence response. Gemini remains available as an alternative adapter by selecting
+`EMBEDDING_PROVIDER=gemini` or `GENERATION_PROVIDER=gemini`.
 
 ## Evaluation
 

@@ -3,6 +3,8 @@ import { StrictMode, useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import "./styles.css";
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "";
+
 type Source = {
   source_id: string;
   rule_number: string | null;
@@ -49,7 +51,7 @@ function App() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch("/api/sources")
+    fetch(`${API_BASE_URL}/api/sources`)
       .then((response) => response.json())
       .then(setSources)
       .catch(() => setError("Could not load the FINRA source manifest."));
@@ -60,7 +62,7 @@ function App() {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch("/api/query", {
+      const response = await fetch(`${API_BASE_URL}/api/query`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ question, retrieval_mode: mode, top_k: 5 }),

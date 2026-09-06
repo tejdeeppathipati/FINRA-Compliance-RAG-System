@@ -6,6 +6,7 @@ from collections.abc import Sequence
 
 from app.config import get_settings
 from app.generation.gemini import GenerationProviderError, generate_grounded_answer
+from app.generation.openai import generate_grounded_answer as generate_openai_answer
 from app.generation.prompts import ABSTENTION_TEXT, PROMPT_VERSION
 from app.retrieval.search import RetrievedPassage
 from app.schemas.query import Citation, QueryResponse, RetrievedChunk
@@ -53,11 +54,15 @@ def build_grounded_response(
         )
         for passage in selected
     ]
-    # The deterministic evidence response is the safety fallback. Gemini can replace
-    # only the prose/citation fields after its citations have been checked.
-    if question and get_settings().generation_provider == "gemini":
+    # The deterministic evidence response is the safety fallback. A configured model
+    # can replace only the prose/citation fields after its citations are checked.
+    if question and get_settings().generation_provider in {"gemini", "openai"}:
         try:
-            generated = generate_grounded_answer(question, selected)
+            generated = (
+                generate_grounded_answer(question, selected)
+                if get_settings().generation_provider == "gemini"
+                else generate_openai_answer(question, selected)
+            )
             if generated.abstained:
                 return QueryResponse(
                     answer=ABSTENTION_TEXT,

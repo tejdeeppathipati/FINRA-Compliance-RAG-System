@@ -1,0 +1,27 @@
+# Render blueprint for the FastAPI service. Create the Supabase database separately
+# and provide its pooled/direct URLs and OpenAI key as dashboard secrets.
+services:
+  - type: web
+    name: finra-compliance-rag-api
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    preDeployCommand: alembic -c backend/alembic.ini upgrade head
+    healthCheckPath: /api/health
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: DATABASE_DIRECT_URL
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: EMBEDDING_PROVIDER
+        value: openai
+      - key: EMBEDDING_MODEL
+        value: text-embedding-3-small
+      - key: GENERATION_PROVIDER
+        value: openai
+      - key: GENERATION_MODEL
+        value: gpt-4.1-mini
+      - key: CORS_ORIGINS
+        sync: false

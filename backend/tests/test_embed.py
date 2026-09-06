@@ -1,4 +1,4 @@
-"""Verify provider selection and Gemini embedding request configuration."""
+"""Verify provider selection and embedding request configuration."""
 
 from types import SimpleNamespace
 
@@ -34,3 +34,29 @@ def test_gemini_embedding_provider_uses_retrieval_configuration(monkeypatch) -> 
     assert calls["config"].output_dimensionality == 1536
     assert has_embedding_credentials(settings) is True
     assert embedding_model_name(settings) == "gemini-embedding-001"
+
+
+def test_openai_embedding_provider_uses_configured_model(monkeypatch) -> None:
+    calls: dict[str, object] = {}
+
+    class FakeEmbeddings:
+        def create(self, **kwargs):
+            calls.update(kwargs)
+            return SimpleNamespace(data=[SimpleNamespace(embedding=[0.0] * 1536)])
+
+    class FakeClient:
+        embeddings = FakeEmbeddings()
+
+    monkeypatch.setattr("app.ingestion.embed.OpenAI", lambda **_: FakeClient())
+    settings = Settings(
+        embedding_provider="openai",
+        openai_api_key="test-key",
+        embedding_model="text-embedding-3-small",
+    )
+
+    values = embed_text("Rule 2090", settings=settings)
+
+    assert len(values) == 1536
+    assert calls == {"model": "text-embedding-3-small", "input": "Rule 2090"}
+    assert has_embedding_credentials(settings) is True
+    assert embedding_model_name(settings) == "text-embedding-3-small"
