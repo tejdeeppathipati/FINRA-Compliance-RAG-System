@@ -9,7 +9,7 @@ from app.config import get_settings
 
 
 def build_engine(database_url: str | None = None) -> Engine:
-    url = database_url or get_settings().database_url
+    url = database_url or get_settings().runtime_database_url
     return create_engine(url, pool_pre_ping=True)
 
 

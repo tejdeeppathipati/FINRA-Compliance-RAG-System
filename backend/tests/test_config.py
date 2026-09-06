@@ -19,3 +19,18 @@ def test_direct_database_url_is_used_for_migrations() -> None:
     )
 
     assert settings.migration_database_url == "postgresql+psycopg://direct/database"
+
+
+def test_standard_postgres_urls_are_normalized_for_psycopg() -> None:
+    settings = Settings(
+        _env_file=None,
+        database_url="postgres://user:password@host:5432/database",
+        database_direct_url="postgresql://user:password@host:5432/database",
+    )
+
+    assert settings.runtime_database_url == (
+        "postgresql+psycopg://user:password@host:5432/database"
+    )
+    assert settings.migration_database_url == (
+        "postgresql+psycopg://user:password@host:5432/database"
+    )

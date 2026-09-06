@@ -7,6 +7,15 @@ from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
+def _sqlalchemy_url(url: str) -> str:
+    """Ensure standard Postgres URLs use the psycopg 3 SQLAlchemy driver."""
+    if url.startswith("postgres://"):
+        return "postgresql+psycopg://" + url.removeprefix("postgres://")
+    if url.startswith("postgresql://"):
+        return "postgresql+psycopg://" + url.removeprefix("postgresql://")
+    return url
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=(".env", "../.env"),
@@ -34,7 +43,11 @@ class Settings(BaseSettings):
 
     @property
     def migration_database_url(self) -> str:
-        return self.database_direct_url or self.database_url
+        return _sqlalchemy_url(self.database_direct_url or self.database_url)
+
+    @property
+    def runtime_database_url(self) -> str:
+        return _sqlalchemy_url(self.database_url)
 
 
 @lru_cache
